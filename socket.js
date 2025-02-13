@@ -4,7 +4,7 @@ const users = {}; // Store active users by userId
 const socketToUserMap = {}; // Maps socket.id to userId
 
 module.exports = (server) => {
-    const io = new Server(server, { cors: { origin: "http://localhost:5173", methods: ["GET", "POST"] } });
+    const io = new Server(server, { cors: { origin: "https://hospital-frontend-tan.vercel.app", methods: ["GET", "POST"] } });
 
     io.on("connection", (socket) => {
         console.log(`User connected: ${socket.id}`);
