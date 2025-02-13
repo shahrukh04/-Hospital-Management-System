@@ -16,7 +16,7 @@ const server = http.createServer(app);
 
 // Middleware
 app.use(cors({ 
-    origin: ["https://hospital-frontend.vercel.app"], // Add your Vercel frontend URL here
+    origin: ["https://hospital-frontend-tan.vercel.app"], // Add your Vercel frontend URL here
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true // If using cookies or authentication
 }));
