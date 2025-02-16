@@ -1,3 +1,4 @@
+// index.js
 const express = require("express");
 const http = require("http");
 const cors = require("cors");
@@ -14,11 +15,12 @@ dotenv.config();
 const app = express();
 const server = http.createServer(app);
 
-// Middleware
-app.use(cors({ 
-    origin: ["https://hospital-frontend-tan.vercel.app"], // Add your Vercel frontend URL here
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    credentials: true // If using cookies or authentication
+// Updated CORS configuration to support both local and production
+app.use(cors({
+    origin: ["http://localhost:5173", "https://hospital-frontend-tan.vercel.app"],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
 app.use(express.json());
@@ -45,15 +47,20 @@ const startServer = async () => {
 
         // Routes
         app.use("/api", routes);
-        
+
         // Socket setup
         socketSetup(server);
-        
+
         // 404 handler
         app.use((req, res) => res.status(404).json({ message: "Route not found" }));
-        
+
         // Start server
-        server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+        server.listen(PORT, () => {
+            console.log(`Server running on port ${PORT}`);
+            console.log(`Server accepting connections from:`);
+            console.log(`- http://localhost:5173 (Local Frontend)`);
+            console.log(`- https://hospital-frontend-tan.vercel.app (Production Frontend)`);
+        });
     } catch (error) {
         console.error('Failed to start server:', error);
         process.exit(1);
