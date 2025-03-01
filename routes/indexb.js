@@ -21,7 +21,6 @@ router.use("/auth", authRoutes);
 router.use("/doctors", doctorRoutes);
 router.use("/prescriptions", prescriptionRoutes);
 router.use("/medicines", medicineRoutes);  // Make sure this points to your new Mongoose-based medicine routes
-router.use("/stats", statsRoutes);
 router.use("/patients", patientRoutes);
 router.use("/appointments", appointmentRoutes);
 router.use("/bills", billingRoutes);
@@ -29,8 +28,8 @@ router.use("/staff", staffRoutes);
 router.use("/labs", labRoutes);
 router.use("/emergency", emergencyRoutes);   // ✅ Removed "s" - corrected to match frontend
 router.use("/beds", bedRoutes);
-app.use('/api/beds', bedRoutes);       // For bed-related endpoints
-app.use('/api/stats', statsRoutes);
+router.use('/api/beds', bedRoutes);       // For bed-related endpoints
+router.use('/api/stats', statsRoutes);
 
 // ✅ Welcome Route
 router.get("/", (req, res) => res.send("Welcome to Hospital Management API"));
