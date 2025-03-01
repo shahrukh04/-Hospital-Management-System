@@ -1,5 +1,65 @@
 import Bed from "../models/Bed.js";
 
+// ✅ Create Bed
+export const createBed = async (req, res) => {
+    try {
+        const newBed = new Bed(req.body);
+        const savedBed = await newBed.save();
+        res.status(201).json(savedBed);
+    } catch (error) {
+        res.status(500).json({ message: 'Failed to create bed', error: error.message });
+    }
+};
+
+// ✅ Get All Beds
+export const getAllBeds = async (req, res) => {
+    try {
+        const beds = await Bed.find();
+        res.status(200).json(beds);
+    } catch (error) {
+        res.status(500).json({ message: 'Failed to fetch beds', error: error.message });
+    }
+};
+
+// ✅ Get Single Bed by ID
+export const getBedById = async (req, res) => {
+    try {
+        const bed = await Bed.findById(req.params.id);
+        if (!bed) {
+            return res.status(404).json({ message: 'Bed not found' });
+        }
+        res.status(200).json(bed);
+    } catch (error) {
+        res.status(500).json({ message: 'Failed to fetch bed', error: error.message });
+    }
+};
+
+// ✅ Update Bed
+export const updateBed = async (req, res) => {
+    try {
+        const updatedBed = await Bed.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        if (!updatedBed) {
+            return res.status(404).json({ message: 'Bed not found' });
+        }
+        res.status(200).json(updatedBed);
+    } catch (error) {
+        res.status(500).json({ message: 'Failed to update bed', error: error.message });
+    }
+};
+
+// ✅ Delete Bed
+export const deleteBed = async (req, res) => {
+    try {
+        const deletedBed = await Bed.findByIdAndDelete(req.params.id);
+        if (!deletedBed) {
+            return res.status(404).json({ message: 'Bed not found' });
+        }
+        res.status(200).json({ message: 'Bed deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ message: 'Failed to delete bed', error: error.message });
+    }
+};
+
 // ✅ Total Beds Count
 export const getTotalBeds = async (req, res) => {
     try {
@@ -54,7 +114,7 @@ export const getBedOccupancyStats = async (req, res) => {
     }
 };
 
-// ✅ Bed Stats for Specific Month (optional, if needed for monthly report)
+// ✅ Monthly Bed Stats (for report page)
 export const getMonthlyBedStats = async (req, res) => {
     try {
         const { year, month } = req.query;
