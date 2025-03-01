@@ -1,14 +1,12 @@
-// index.js
-const express = require("express");
-const http = require("http");
-const cors = require("cors");
-const bodyParser = require("body-parser");
-const dotenv = require("dotenv");
-const connectDB = require("./config/db");
-const socketSetup = require("./socket");
-const routes = require("./routes/indexb");
-const { Server } = require("socket.io");
-const { MongoClient } = require("mongodb");
+import express from "express";
+import http from "http";
+import cors from "cors";
+import bodyParser from "body-parser";
+import dotenv from "dotenv";
+import { MongoClient } from "mongodb";
+import connectDB from "./config/db.js";
+import socketSetup from "./socket.js";
+import routes from "./routes/indexb.js";
 
 dotenv.config();
 
@@ -44,6 +42,12 @@ const startServer = async () => {
         app.locals.medicineCollection = db.collection('medicines');
         app.locals.doctorCollection = db.collection('doctors');
         app.locals.prescriptionCollection = db.collection('prescriptions');
+        app.locals.patientCollection = db.collection('patients');
+        app.locals.appointmentCollection = db.collection('appointments');
+        app.locals.billingCollection = db.collection('billings');
+        app.locals.staffCollection = db.collection('staff');
+        app.locals.labCollection = db.collection('labs');
+        app.locals.emergencyCollection = db.collection('emergencies');
 
         // Routes
         app.use("/api", routes);

@@ -1,16 +1,38 @@
-    const express = require("express");
-    const authRoutes = require("./authRoutes");
-    const doctorRoutes = require("./doctorRoutes");
-    const prescriptionRoutes = require("./prescriptionRoutes");
-    const medicineRoutes = require("./medicineRoutes");
-    const statsRoutes = require("./statsRoutes");
+import express from "express";
 
-    const router = express.Router();
-    router.use("/auth", authRoutes);
-    router.use("/doctors", doctorRoutes);
-    router.use("/prescriptions", prescriptionRoutes);
-    router.use("/medicines", medicineRoutes);
-    router.use("/stats", statsRoutes);
+// ✅ Import all routes
+import authRoutes from "./authRoutes.js";
+import doctorRoutes from "./doctorRoutes.js";
+import prescriptionRoutes from "./prescriptionRoutes.js";
+import medicineRoutes from "./medicineRoutes.js";  // Ensure this is the new Mongoose-based version
+import statsRoutes from "./statsRoutes.js";
+import patientRoutes from "./patientRoutes.js";
+import appointmentRoutes from "./appointmentRoutes.js";
+import billingRoutes from "./billingRoutes.js";
+import staffRoutes from "./staffRoutes.js";
+import labRoutes from "./labRoutes.js";
+import emergencyRoutes from "./emergencyRoutes.js";   // ✅ Already imported
+import bedRoutes from "./bedRoutes.js";
 
-    router.get("/", (req, res) => res.send("Welcome to Hospital Management API"));
-    module.exports = router;
+const router = express.Router();
+
+// ✅ Use `router.use()` to mount routes
+router.use("/auth", authRoutes);
+router.use("/doctors", doctorRoutes);
+router.use("/prescriptions", prescriptionRoutes);
+router.use("/medicines", medicineRoutes);  // Make sure this points to your new Mongoose-based medicine routes
+router.use("/stats", statsRoutes);
+router.use("/patients", patientRoutes);
+router.use("/appointments", appointmentRoutes);
+router.use("/bills", billingRoutes);
+router.use("/staff", staffRoutes);
+router.use("/labs", labRoutes);
+router.use("/emergency", emergencyRoutes);   // ✅ Removed "s" - corrected to match frontend
+router.use("/beds", bedRoutes);
+app.use('/api/beds', bedRoutes);       // For bed-related endpoints
+app.use('/api/stats', statsRoutes);
+
+// ✅ Welcome Route
+router.get("/", (req, res) => res.send("Welcome to Hospital Management API"));
+
+export default router;

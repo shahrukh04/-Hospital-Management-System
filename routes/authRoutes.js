@@ -1,15 +1,15 @@
-const express = require("express");
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
-const User = require("../models/User");
+import express from "express";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import User from "../models/User.js";
+
 const router = express.Router();
 
 // User Registration
 router.post("/register", async (req, res) => {
-    const {   username, email, password } = req.body;
-    
+    const { username, email, password } = req.body;
+
     try {
-        // Validate input
         if (!username || !email || !password) {
             return res.status(400).json({
                 success: false,
@@ -17,111 +17,87 @@ router.post("/register", async (req, res) => {
             });
         }
 
-        // Check if user already exists
-        const existingUser = await User.findOne({ 
-            $or: [
-                { email: email },
-                { username: username }
-            ]
+        const existingUser = await User.findOne({
+            $or: [{ email: email }, { username: username }]
         });
 
         if (existingUser) {
             return res.status(400).json({
                 success: false,
-                message: existingUser.email === email ? 
-                    "Email already exists" : 
-                    "Username already exists"
+                message: existingUser.email === email ? "Email already exists" : "Username already exists"
             });
         }
 
-        // Create new user (password will be hashed by the pre-save middleware)
-        const newUser = new User({
-            username,
-            email,
-            password
-        });
-
+        const newUser = new User({ username, email, password });
         await newUser.save();
 
         res.status(201).json({
             success: true,
             message: "User registered successfully"
         });
-
     } catch (error) {
         console.error("Registration error:", error);
         res.status(500).json({
             success: false,
             message: "Registration failed",
-            error: error.message // Add this for debugging
+            error: error.message
         });
     }
 });
 
-// Rest of your login route remains the same...
+// User Login
 router.post("/login", async (req, res) => {
-  try {
-      const { email, password } = req.body;
+    try {
+        const { email, password } = req.body;
 
-      // Validate input
-      if (!email || !password) {
-          return res.status(400).json({
-              success: false,
-              message: "Email and password are required"
-          });
-      }
+        if (!email || !password) {
+            return res.status(400).json({
+                success: false,
+                message: "Email and password are required"
+            });
+        }
 
-      // Find user by email
-      const user = await User.findOne({ email });
-      if (!user) {
-          return res.status(401).json({
-              success: false,
-              message: "Invalid email"
-          });
-      }
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(401).json({
+                success: false,
+                message: "Invalid email"
+            });
+        }
 
-      // Compare passwords
-      const isPasswordValid = await bcrypt.compare(password, user.password);
-      if (!isPasswordValid) {
-          return res.status(401).json({
-              success: false,
-              message: "Invalid passwords"
-          });
-      }
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+        if (!isPasswordValid) {
+            return res.status(401).json({
+                success: false,
+                message: "Invalid password"
+            });
+        }
 
-      // Generate JWT token
-      const token = jwt.sign(
-          { 
-              userId: user._id,
-              email: user.email 
-          },
-          process.env.JWT_SECRET,
-          { expiresIn: '24h' }
-      );
+        const token = jwt.sign(
+            { userId: user._id, email: user.email },
+            process.env.JWT_SECRET,
+            { expiresIn: '24h' }
+        );
 
-      // Send success response
-      res.json({
-          success: true,
-          token,
-          user: {
-              id: user._id,
-              username: user.username,
-              email: user.email
-          }
-      });
-
-  } catch (error) {
-      console.error("Login error:", error);
-      res.status(500).json({
-          success: false,
-          message: "Login failed",
-          error: error.message // Adding error message for debugging
-      });
-  }
+        res.json({
+            success: true,
+            token,
+            user: { id: user._id, username: user.username, email: user.email }
+        });
+    } catch (error) {
+        console.error("Login error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Login failed",
+            error: error.message
+        });
+    }
 });
-// Middleware to verify JWT token
-const verifyToken = (req, res, next) => {
-    const token = req.headers.authorization?.split(" ")[1]; // Extract token
+
+// JWT Verification Middleware
+const verifyToken = async (req, res, next) => {
+    const token = req.headers.authorization?.split(" ")[1];
+
     if (!token) {
         return res.status(400).json({
             success: false,
@@ -138,7 +114,7 @@ const verifyToken = (req, res, next) => {
         }
 
         try {
-            const user = await User.findById(decoded.userId).select("-password"); // Exclude password
+            const user = await User.findById(decoded.userId).select("-password");
             if (!user) {
                 return res.status(404).json({
                     success: false,
@@ -157,11 +133,13 @@ const verifyToken = (req, res, next) => {
         }
     });
 };
-// Get logged-in user details (Protected Route)
+
+// Get Logged-in User Details (Protected)
 router.get("/me", verifyToken, (req, res) => {
     res.json({
         success: true,
         user: req.user
     });
 });
-module.exports = router;
+
+export default router;  // ✅ Use `export default` for ESM
