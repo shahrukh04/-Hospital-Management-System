@@ -1,35 +1,35 @@
 import express from 'express';
-import {
-    getAllAppointments,
-    getAppointment,
-    addAppointment,
-    updateAppointment,
-    deleteAppointment,
-    getAppointmentsByDate,
-    getAppointmentsByDoctor,
-    getAppointmentsByPatient,
-    getTodaysAppointments,
-    getUpcomingAppointments,
-
-    rescheduleAppointment
-} from '../controllers/appointmentController.js';
+import appointmentController from '../controllers/appointmentController.js';
+import { requireAuth } from '../middleware/auth.js';
+import { appointmentValidation } from '../middleware/validation.js';
 
 const router = express.Router();
 
-router.get('/today', getTodaysAppointments);
-router.get('/upcoming', getUpcomingAppointments);
-// ✅ Move this above `/:id`
-router.get('/date/:date', getAppointmentsByDate);          // Fetch by date
-router.get('/doctor/:doctorId', getAppointmentsByDoctor);  // Fetch by doctor
-router.get('/patient/:patientId', getAppointmentsByPatient); // Fetch by patient
-router.put('/:id/reschedule', rescheduleAppointment);        // Reschedule appointment
-// Main CRUD
-router.get('/', getAllAppointments);
-router.get('/:id', getAppointment);
-router.post('/', addAppointment);
-router.put('/:id', updateAppointment);
-router.delete('/:id', deleteAppointment);
+// Main CRUD operations
+router.get('/', requireAuth, appointmentController.getAllAppointments);
+router.get('/:id', requireAuth, appointmentController.getAppointmentById);
+router.post('/', requireAuth, appointmentValidation, appointmentController.createAppointment);
+router.put('/:id', requireAuth, appointmentValidation, appointmentController.updateAppointment);
+router.delete('/:id', requireAuth, appointmentController.cancelAppointment); // Using cancel instead of delete
 
-// Custom Endpoints
+// Custom endpoints
+router.get('/available', requireAuth, appointmentController.getAvailableTimeSlots);
+router.get('/statistics', requireAuth, appointmentController.getAppointmentStatistics);
+
+// Patient-specific routes
+router.get('/patient/:patientId', requireAuth, appointmentController.getPatientAppointments);
+
+// Doctor-specific routes
+router.get('/doctor/:doctorId/schedule', requireAuth, appointmentController.getDoctorSchedule);
+
+// Date-specific routes - these will use the getAllAppointments with appropriate filters
+router.get('/date/:date', requireAuth, (req, res) => {
+  req.query.date = req.params.date;
+  return appointmentController.getAllAppointments(req, res);
+});
+
+// Appointment actions
+router.put('/:id/cancel', requireAuth, appointmentController.cancelAppointment);
+router.post('/:id/reminder', requireAuth, appointmentController.sendAppointmentReminder);
 
 export default router;
