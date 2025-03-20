@@ -16,6 +16,7 @@ const billSchema = new mongoose.Schema({
     dueDate: { type: Date, required: true },
     
     // Services/Items billed
+
     items: [{ 
         description: String, 
         quantity: { type: Number, default: 1 },
