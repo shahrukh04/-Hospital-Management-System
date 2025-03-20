@@ -1,5 +1,5 @@
 import Appointment from '../models/Appointment.js';
-import Patient from '../models/Patient.js';
+import Patient from '../models/patientModel.js';
 import Doctor from '../models/Doctor.js';
 import mongoose from 'mongoose';
 import { validationResult } from 'express-validator';

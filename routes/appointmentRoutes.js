@@ -1,6 +1,6 @@
 import express from 'express';
 import appointmentController from '../controllers/appointmentController.js';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth } from '../middleware/authMiddleware.js';
 import { appointmentValidation } from '../middleware/validation.js';
 
 const router = express.Router();
