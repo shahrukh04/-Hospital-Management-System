@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import Department from '../models/department.js';
+import Department from '../models/Department.js';
 
 export const getAllDepartments = async (req, res) => {
     try {
