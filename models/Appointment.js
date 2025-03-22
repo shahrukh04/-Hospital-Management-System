@@ -93,21 +93,12 @@ const appointmentSchema = new mongoose.Schema({
         trim: true
     },
 
-    // Removed insurance-related fields
-    // usePatientInsurance: {
-    //     type: Boolean,
-    //     default: true
-    // },
-
-    // insuranceVerified: {
-    //     type: Boolean,
-    //     default: false
-    // },
-
-    // insuranceNotes: {
-    //     type: String,
-    //     trim: true
-    // },
+    // Use patient's insurance details instead of storing them directly
+    insurance: {
+        type: mongoose.Schema.Types.Mixed,
+        default: null,
+        required: false
+    },
 
     payment: {
         status: {
@@ -162,8 +153,33 @@ appointmentSchema.virtual('doctor', {
     justOne: true
 });
 
-// Pre-save middleware
+// Adding virtual for department
+appointmentSchema.virtual('department', {
+    ref: 'Department',
+    localField: 'departmentId',
+    foreignField: '_id',
+    justOne: true
+});
+
+// Pre-save middleware to copy insurance details from patient
 appointmentSchema.pre('save', async function(next) {
+    // Check if this is a new appointment or if we need to update insurance
+    if (this.isNew || this.isModified('patientId')) {
+        try {
+            const Patient = mongoose.model('Patient');
+            const patient = await Patient.findById(this.patientId);
+            if (patient && patient.insuranceDetails) {
+                this.insurance = patient.insuranceDetails;
+            } else {
+                // Set to empty object if patient has no insurance
+                this.insurance = {};
+            }
+        } catch (error) {
+            // If there's an error, set insurance to empty object
+            this.insurance = {};
+            console.error('Error fetching patient insurance details:', error);
+        }
+    }
     // Check for overlapping appointments for the doctor
     if (this.isNew || this.isModified('date') || this.isModified('startTime') || this.isModified('endTime')) {
         const overlappingAppointment = await this.constructor.findOne({
@@ -213,8 +229,9 @@ appointmentSchema.statics.findUpcoming = function(limit = 10) {
     })
     .sort({ date: 1, startTime: 1 })
     .limit(limit)
-    .populate('patient', 'name phone insuranceDetails') // Include insuranceDetails from Patient
-    .populate('doctor', 'name specialization');
+    .populate('patient', 'name phone insuranceDetails')
+    .populate('doctor', 'name specialization')
+    .populate('department');
 };
 
 const Appointment = mongoose.model('Appointment', appointmentSchema);
