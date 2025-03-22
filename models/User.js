@@ -9,13 +9,15 @@ const UserSchema = new mongoose.Schema({
     type: String,
     required: true,
     enum: ['admin', 'doctor', 'patient', 'reception', 'nurse', 'lab_technician', 'pharmacist'],
-    default: 'patient'
+    default: 'patient',
   },
-  name: { type: String, required: true }, // Changed from firstName and lastName to name
+  name: { type: String, required: true },
   phone: { type: String },
   created: { type: Date, default: Date.now },
   lastLogin: { type: Date },
-  isActive: { type: Boolean, default: true }
+  isActive: { type: Boolean, default: true },
+  preferences: { type: Object, default: {} }, // User preferences
+  permissions: { type: Array, default: [] }, // User permissions
 });
 
 // Hash password before saving
@@ -30,15 +32,15 @@ UserSchema.pre("save", async function (next) {
 });
 
 // Method to compare passwords for login
-UserSchema.methods.comparePassword = async function(candidatePassword) {
+UserSchema.methods.comparePassword = async function (candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
 };
 
 // Method to generate default email based on role
-UserSchema.methods.generateDefaultEmail = function() {
-  const baseName = this.name.toLowerCase().replace(/\s+/g, '.'); // Use name instead of firstName and lastName
+UserSchema.methods.generateDefaultEmail = function () {
+  const baseName = this.name.toLowerCase().replace(/\s+/g, '.');
 
-  switch(this.role) {
+  switch (this.role) {
     case 'admin':
       return `${baseName}@admin.hospital.com`;
     case 'doctor':
@@ -59,7 +61,7 @@ UserSchema.methods.generateDefaultEmail = function() {
 };
 
 // Set default email if not provided
-UserSchema.pre("validate", function(next) {
+UserSchema.pre("validate", function (next) {
   if (!this.email) {
     this.email = this.generateDefaultEmail();
   }
