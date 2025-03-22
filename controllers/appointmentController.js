@@ -19,7 +19,7 @@ class AppointmentController {
         doctorId,
         patientId,
         startDate,
-        endDate
+        endDate,
       } = req.query;
 
       // Build filter object
@@ -39,9 +39,9 @@ class AppointmentController {
 
       // Execute query with pagination
       const appointments = await Appointment.find(filter)
-        .populate('patientId', 'firstName lastName phone')
-        .populate('doctorId', 'firstName lastName specialization')
-        .populate('departmentId', 'name')
+        .populate('patient', 'name phone insuranceDetails') // Include insuranceDetails
+        .populate('doctor', 'name specialization')
+        .populate('department', 'name')
         .sort({ date: -1, startTime: 1 })
         .skip((parseInt(page) - 1) * parseInt(limit))
         .limit(parseInt(limit));
@@ -54,14 +54,14 @@ class AppointmentController {
         count: appointments.length,
         totalPages: Math.ceil(totalCount / parseInt(limit)),
         currentPage: parseInt(page),
-        data: appointments
+        data: appointments,
       });
     } catch (error) {
       console.error('Error fetching appointments:', error);
       return res.status(500).json({
         success: false,
         message: 'Server error while fetching appointments',
-        error: error.message
+        error: error.message,
       });
     }
   }
@@ -73,28 +73,28 @@ class AppointmentController {
   async getAppointmentById(req, res) {
     try {
       const appointment = await Appointment.findById(req.params.id)
-        .populate('patientId', 'firstName lastName phone email dateOfBirth')
-        .populate('doctorId', 'firstName lastName specialization department')
-        .populate('departmentId', 'name location')
+        .populate('patient', 'name phone email dateOfBirth insuranceDetails') // Include insuranceDetails
+        .populate('doctor', 'name specialization department')
+        .populate('department', 'name location')
         .populate('createdBy', 'firstName lastName role');
 
       if (!appointment) {
         return res.status(404).json({
           success: false,
-          message: 'Appointment not found'
+          message: 'Appointment not found',
         });
       }
 
       return res.status(200).json({
         success: true,
-        data: appointment
+        data: appointment,
       });
     } catch (error) {
       console.error('Error fetching appointment:', error);
       return res.status(500).json({
         success: false,
         message: 'Server error while fetching appointment',
-        error: error.message
+        error: error.message,
       });
     }
   }
@@ -113,7 +113,7 @@ class AppointmentController {
       if (!errors.isEmpty()) {
         return res.status(400).json({
           success: false,
-          errors: errors.array()
+          errors: errors.array(),
         });
       }
 
@@ -129,7 +129,7 @@ class AppointmentController {
         reason,
         priority,
         notes,
-        insurance
+        insurance, // Include insurance details
       } = req.body;
 
       // Verify patient exists
@@ -139,7 +139,7 @@ class AppointmentController {
         session.endSession();
         return res.status(404).json({
           success: false,
-          message: 'Patient not found'
+          message: 'Patient not found',
         });
       }
 
@@ -150,25 +150,25 @@ class AppointmentController {
         session.endSession();
         return res.status(404).json({
           success: false,
-          message: 'Doctor not found'
+          message: 'Doctor not found',
         });
       }
 
-      // Check doctor availability (simple check for conflicting appointments)
+      // Check doctor availability
       const appointmentDate = new Date(date);
       const existingAppointment = await Appointment.findOne({
         doctorId,
         date: {
           $gte: new Date(appointmentDate.setHours(0, 0, 0)),
-          $lt: new Date(appointmentDate.setHours(23, 59, 59))
+          $lt: new Date(appointmentDate.setHours(23, 59, 59)),
         },
         status: { $nin: ['cancelled', 'no-show'] },
         $or: [
           {
             startTime: { $lt: endTime },
-            endTime: { $gt: startTime }
-          }
-        ]
+            endTime: { $gt: startTime },
+          },
+        ],
       }).session(session);
 
       if (existingAppointment) {
@@ -176,7 +176,7 @@ class AppointmentController {
         session.endSession();
         return res.status(400).json({
           success: false,
-          message: 'The selected time slot conflicts with an existing appointment'
+          message: 'The selected time slot conflicts with an existing appointment',
         });
       }
 
@@ -193,8 +193,8 @@ class AppointmentController {
         reason,
         priority: priority || 'medium',
         notes,
-        insurance,
-        createdBy: req.user.id // Assuming user info is attached by auth middleware
+        insurance, // Include insurance details
+        createdBy: req.user.id, // Assuming user info is attached by auth middleware
       });
 
       await appointment.save({ session });
@@ -206,7 +206,7 @@ class AppointmentController {
       return res.status(201).json({
         success: true,
         data: appointment,
-        message: 'Appointment created successfully'
+        message: 'Appointment created successfully',
       });
     } catch (error) {
       // Abort transaction on error
@@ -217,7 +217,7 @@ class AppointmentController {
       return res.status(500).json({
         success: false,
         message: 'Server error while creating appointment',
-        error: error.message
+        error: error.message,
       });
     }
   }
@@ -233,7 +233,7 @@ class AppointmentController {
       if (!errors.isEmpty()) {
         return res.status(400).json({
           success: false,
-          errors: errors.array()
+          errors: errors.array(),
         });
       }
 
@@ -253,14 +253,16 @@ class AppointmentController {
       if (!appointment) {
         return res.status(404).json({
           success: false,
-          message: 'Appointment not found'
+          message: 'Appointment not found',
         });
       }
 
       // If changing date/time, check for conflicts
-      if ((updateData.date || updateData.startTime || updateData.endTime) &&
-          (updateData.status !== 'cancelled' && appointment.status !== 'cancelled')) {
-
+      if (
+        (updateData.date || updateData.startTime || updateData.endTime) &&
+        updateData.status !== 'cancelled' &&
+        appointment.status !== 'cancelled'
+      ) {
         const doctorId = updateData.doctorId || appointment.doctorId;
         const date = updateData.date || appointment.date;
         const startTime = updateData.startTime || appointment.startTime;
@@ -272,21 +274,21 @@ class AppointmentController {
           doctorId,
           date: {
             $gte: new Date(appointmentDate.setHours(0, 0, 0)),
-            $lt: new Date(appointmentDate.setHours(23, 59, 59))
+            $lt: new Date(appointmentDate.setHours(23, 59, 59)),
           },
           status: { $nin: ['cancelled', 'no-show'] },
           $or: [
             {
               startTime: { $lt: endTime },
-              endTime: { $gt: startTime }
-            }
-          ]
+              endTime: { $gt: startTime },
+            },
+          ],
         });
 
         if (existingAppointment) {
           return res.status(400).json({
             success: false,
-            message: 'The selected time slot conflicts with an existing appointment'
+            message: 'The selected time slot conflicts with an existing appointment',
           });
         }
       }
@@ -296,20 +298,21 @@ class AppointmentController {
         id,
         { $set: updateData },
         { new: true, runValidators: true }
-      ).populate('patientId', 'firstName lastName phone')
-       .populate('doctorId', 'firstName lastName specialization');
+      )
+        .populate('patient', 'name phone insuranceDetails') // Include insuranceDetails
+        .populate('doctor', 'name specialization');
 
       return res.status(200).json({
         success: true,
         data: appointment,
-        message: 'Appointment updated successfully'
+        message: 'Appointment updated successfully',
       });
     } catch (error) {
       console.error('Error updating appointment:', error);
       return res.status(500).json({
         success: false,
         message: 'Server error while updating appointment',
-        error: error.message
+        error: error.message,
       });
     }
   }
@@ -326,7 +329,7 @@ class AppointmentController {
       if (!cancellationReason) {
         return res.status(400).json({
           success: false,
-          message: 'Cancellation reason is required'
+          message: 'Cancellation reason is required',
         });
       }
 
@@ -334,7 +337,7 @@ class AppointmentController {
       if (!appointment) {
         return res.status(404).json({
           success: false,
-          message: 'Appointment not found'
+          message: 'Appointment not found',
         });
       }
 
@@ -344,14 +347,14 @@ class AppointmentController {
       return res.status(200).json({
         success: true,
         data: appointment,
-        message: 'Appointment cancelled successfully'
+        message: 'Appointment cancelled successfully',
       });
     } catch (error) {
       console.error('Error cancelling appointment:', error);
       return res.status(500).json({
         success: false,
         message: 'Server error while cancelling appointment',
-        error: error.message
+        error: error.message,
       });
     }
   }
@@ -367,7 +370,7 @@ class AppointmentController {
       if (!doctorId || !date) {
         return res.status(400).json({
           success: false,
-          message: 'Doctor ID and date are required'
+          message: 'Doctor ID and date are required',
         });
       }
 
@@ -376,7 +379,7 @@ class AppointmentController {
       if (!doctor) {
         return res.status(404).json({
           success: false,
-          message: 'Doctor not found'
+          message: 'Doctor not found',
         });
       }
 
@@ -384,12 +387,12 @@ class AppointmentController {
       const dayOfWeek = selectedDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
 
       // Find doctor's working hours for this day
-      const workingHours = doctor.workingHours.find(wh => wh.dayOfWeek === dayOfWeek);
+      const workingHours = doctor.workingHours.find((wh) => wh.dayOfWeek === dayOfWeek);
       if (!workingHours || !workingHours.isWorking) {
         return res.status(200).json({
           success: true,
           message: 'Doctor is not available on this day',
-          data: []
+          data: [],
         });
       }
 
@@ -398,21 +401,21 @@ class AppointmentController {
         doctorId,
         date: {
           $gte: new Date(selectedDate.setHours(0, 0, 0)),
-          $lt: new Date(selectedDate.setHours(23, 59, 59))
+          $lt: new Date(selectedDate.setHours(23, 59, 59)),
         },
-        status: { $nin: ['cancelled', 'no-show'] }
+        status: { $nin: ['cancelled', 'no-show'] },
       }).sort({ startTime: 1 });
 
       // Calculate available slots
       const startTime = workingHours.startTime; // Format: "09:00"
-      const endTime = workingHours.endTime;     // Format: "17:00"
+      const endTime = workingHours.endTime; // Format: "17:00"
 
       // Convert working hours to minutes since midnight for easier calculation
       const startMinutes = parseInt(startTime.split(':')[0]) * 60 + parseInt(startTime.split(':')[1]);
       const endMinutes = parseInt(endTime.split(':')[0]) * 60 + parseInt(endTime.split(':')[1]);
 
       // Create array of busy time ranges
-      const busyTimeRanges = appointments.map(app => {
+      const busyTimeRanges = appointments.map((app) => {
         const appStartMinutes = parseInt(app.startTime.split(':')[0]) * 60 + parseInt(app.startTime.split(':')[1]);
         const appEndMinutes = parseInt(app.endTime.split(':')[0]) * 60 + parseInt(app.endTime.split(':')[1]);
         return { start: appStartMinutes, end: appEndMinutes };
@@ -424,8 +427,8 @@ class AppointmentController {
 
       while (currentMinute + parseInt(duration) <= endMinutes) {
         // Check if this time slot overlaps with any busy time range
-        const isOverlapping = busyTimeRanges.some(range =>
-          !(currentMinute + parseInt(duration) <= range.start || currentMinute >= range.end)
+        const isOverlapping = busyTimeRanges.some(
+          (range) => !(currentMinute + parseInt(duration) <= range.start || currentMinute >= range.end)
         );
 
         if (!isOverlapping) {
@@ -440,7 +443,7 @@ class AppointmentController {
           availableSlots.push({
             startTime: `${slotStartHour}:${slotStartMinute}`,
             endTime: `${slotEndHour}:${slotEndMin}`,
-            duration: parseInt(duration)
+            duration: parseInt(duration),
           });
         }
 
@@ -453,16 +456,16 @@ class AppointmentController {
         data: {
           date: date,
           doctorId: doctorId,
-          doctorName: `${doctor.firstName} ${doctor.lastName}`,
-          availableSlots: availableSlots
-        }
+          doctorName: `${doctor.name}`,
+          availableSlots: availableSlots,
+        },
       });
     } catch (error) {
       console.error('Error fetching available time slots:', error);
       return res.status(500).json({
         success: false,
         message: 'Server error while fetching available time slots',
-        error: error.message
+        error: error.message,
       });
     }
   }
@@ -482,8 +485,9 @@ class AppointmentController {
 
       // Fetch appointments with pagination
       const appointments = await Appointment.find(filter)
-        .populate('doctorId', 'firstName lastName specialization')
-        .populate('departmentId', 'name')
+        .populate('doctor', 'name specialization')
+        .populate('department', 'name')
+        .populate('patient', 'name phone insuranceDetails') // Include insuranceDetails
         .sort({ date: -1, startTime: 1 })
         .skip((parseInt(page) - 1) * parseInt(limit))
         .limit(parseInt(limit));
@@ -495,14 +499,14 @@ class AppointmentController {
         count: appointments.length,
         totalPages: Math.ceil(totalCount / parseInt(limit)),
         currentPage: parseInt(page),
-        data: appointments
+        data: appointments,
       });
     } catch (error) {
       console.error('Error fetching patient appointments:', error);
       return res.status(500).json({
         success: false,
         message: 'Server error while fetching patient appointments',
-        error: error.message
+        error: error.message,
       });
     }
   }
@@ -524,7 +528,7 @@ class AppointmentController {
         const selectedDate = new Date(date);
         filter.date = {
           $gte: new Date(selectedDate.setHours(0, 0, 0)),
-          $lt: new Date(selectedDate.setHours(23, 59, 59))
+          $lt: new Date(selectedDate.setHours(23, 59, 59)),
         };
       } else if (startDate || endDate) {
         filter.date = {};
@@ -534,20 +538,106 @@ class AppointmentController {
 
       // Get appointments
       const appointments = await Appointment.find(filter)
-        .populate('patientId', 'firstName lastName phone')
+        .populate('patient', 'name phone insuranceDetails') // Include insuranceDetails
         .sort({ date: 1, startTime: 1 });
 
       return res.status(200).json({
         success: true,
         count: appointments.length,
-        data: appointments
+        data: appointments,
       });
     } catch (error) {
       console.error('Error fetching doctor schedule:', error);
       return res.status(500).json({
         success: false,
         message: 'Server error while fetching doctor schedule',
-        error: error.message
+        error: error.message,
+      });
+    }
+  }
+
+  /**
+   * Add diagnosis to an appointment
+   * @route POST /api/appointments/diagnose/:id
+   */
+  async addDiagnosis(req, res) {
+    try {
+      const { id } = req.params;
+      const { diagnosis, treatment, prescriptions, notes } = req.body;
+
+      // Find the appointment
+      const appointment = await Appointment.findById(id);
+
+      if (!appointment) {
+        return res.status(404).json({
+          success: false,
+          message: 'Appointment not found',
+        });
+      }
+
+      // Update the appointment with diagnosis information
+      appointment.diagnosis = diagnosis;
+      appointment.treatment = treatment;
+      appointment.prescriptions = prescriptions;
+      appointment.medicalNotes = notes;
+      appointment.diagnosedBy = req.user.id
+      appointment.diagnosedAt = new Date();
+      appointment.status = 'completed'; // Update status to completed
+
+      await appointment.save();
+
+      return res.status(200).json({
+        success: true,
+        data: appointment,
+        message: 'Diagnosis added successfully',
+      });
+    } catch (error) {
+      console.error('Error adding diagnosis:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Server error while adding diagnosis',
+        error: error.message,
+      });
+    }
+  }
+
+  /**
+   * Get current patient's appointments
+   * @route GET /api/my-appointments
+   */
+  async getMyAppointments(req, res) {
+    try {
+      const patientId = req.user.id; // Assuming patient ID is available from auth middleware
+      const { status, page = 1, limit = 10 } = req.query;
+
+      // Build filter
+      const filter = { patientId };
+      if (status) filter.status = status;
+
+      // Fetch appointments with pagination
+      const appointments = await Appointment.find(filter)
+        .populate('doctor', 'name specialization')
+        .populate('department', 'name')
+        .populate('patient', 'name phone insuranceDetails') // Include insuranceDetails
+        .sort({ date: -1, startTime: 1 })
+        .skip((parseInt(page) - 1) * parseInt(limit))
+        .limit(parseInt(limit));
+
+      const totalCount = await Appointment.countDocuments(filter);
+
+      return res.status(200).json({
+        success: true,
+        count: appointments.length,
+        totalPages: Math.ceil(totalCount / parseInt(limit)),
+        currentPage: parseInt(page),
+        data: appointments,
+      });
+    } catch (error) {
+      console.error('Error fetching my appointments:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Server error while fetching your appointments',
+        error: error.message,
       });
     }
   }
@@ -562,13 +652,13 @@ class AppointmentController {
       const { type = 'email' } = req.body;
 
       const appointment = await Appointment.findById(id)
-        .populate('patientId', 'firstName lastName email phone')
-        .populate('doctorId', 'firstName lastName specialization');
+        .populate('patient', 'name email phone')
+        .populate('doctor', 'name specialization');
 
       if (!appointment) {
         return res.status(404).json({
           success: false,
-          message: 'Appointment not found'
+          message: 'Appointment not found',
         });
       }
 
@@ -585,7 +675,7 @@ class AppointmentController {
       appointment.reminders.push({
         type,
         sentAt: new Date(),
-        status: notificationStatus
+        status: notificationStatus,
       });
 
       await appointment.save();
@@ -593,14 +683,14 @@ class AppointmentController {
       return res.status(200).json({
         success: true,
         message: `Reminder ${notificationStatus} successfully`,
-        data: appointment
+        data: appointment,
       });
     } catch (error) {
       console.error('Error sending appointment reminder:', error);
       return res.status(500).json({
         success: false,
         message: 'Server error while sending appointment reminder',
-        error: error.message
+        error: error.message,
       });
     }
   }
@@ -621,13 +711,13 @@ class AppointmentController {
       const todayAppointments = await Appointment.countDocuments({
         date: {
           $gte: today,
-          $lt: tomorrow
-        }
+          $lt: tomorrow,
+        },
       });
 
       // Get pending appointments
       const pendingAppointments = await Appointment.countDocuments({
-        status: { $in: ['scheduled', 'confirmed'] }
+        status: { $in: ['scheduled', 'confirmed'] },
       });
 
       // Get completion rate for this month
@@ -637,16 +727,16 @@ class AppointmentController {
       const monthlyAppointments = await Appointment.countDocuments({
         date: {
           $gte: startOfMonth,
-          $lte: endOfMonth
-        }
+          $lte: endOfMonth,
+        },
       });
 
       const completedAppointments = await Appointment.countDocuments({
         date: {
           $gte: startOfMonth,
-          $lte: endOfMonth
+          $lte: endOfMonth,
         },
-        status: 'completed'
+        status: 'completed',
       });
 
       const completionRate = monthlyAppointments > 0
@@ -657,9 +747,9 @@ class AppointmentController {
       const noShowAppointments = await Appointment.countDocuments({
         date: {
           $gte: startOfMonth,
-          $lte: endOfMonth
+          $lte: endOfMonth,
         },
-        status: 'no-show'
+        status: 'no-show',
       });
 
       const noShowRate = monthlyAppointments > 0
@@ -670,26 +760,26 @@ class AppointmentController {
       const pipeline = [
         {
           $match: {
-            date: { $gte: new Date(today.getFullYear(), today.getMonth() - 1, 1) }
-          }
+            date: { $gte: new Date(today.getFullYear(), today.getMonth() - 1, 1) },
+          },
         },
         {
           $project: {
-            dayOfWeek: { $dayOfWeek: "$date" }
-          }
+            dayOfWeek: { $dayOfWeek: '$date' },
+          },
         },
         {
           $group: {
-            _id: "$dayOfWeek",
-            count: { $sum: 1 }
-          }
+            _id: '$dayOfWeek',
+            count: { $sum: 1 },
+          },
         },
         {
-          $sort: { count: -1 }
+          $sort: { count: -1 },
         },
         {
-          $limit: 1
-        }
+          $limit: 1,
+        },
       ];
 
       const busiestDayResult = await Appointment.aggregate(pipeline);
@@ -708,15 +798,15 @@ class AppointmentController {
           completionRate: completionRate.toFixed(2),
           noShowRate: noShowRate.toFixed(2),
           monthlyAppointments,
-          busiestDay
-        }
+          busiestDay,
+        },
       });
     } catch (error) {
       console.error('Error generating appointment statistics:', error);
       return res.status(500).json({
         success: false,
         message: 'Server error while generating appointment statistics',
-        error: error.message
+        error: error.message,
       });
     }
   }

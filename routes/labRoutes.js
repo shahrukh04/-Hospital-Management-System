@@ -1,31 +1,28 @@
 import express from 'express';
-import {
-    getAllLabTests,
-    getLabTest,
-    orderLabTest,           // ✅ Corrected from addLabTest
-    updateLabTestStatus     // ✅ Corrected from updateLabTest
-} from '../controllers/labController.js';   // Use ESM import with `.js`
-
-import LabTest from '../models/LabTest.js';   // Import the LabTest model with ESM
+import { requireAuth, authorize } from '../middleware/authMiddleware.js';
+import labController from '../controllers/labController.js';
 
 const router = express.Router();
 
-router.get('/', getAllLabTests);
-router.get('/:id', getLabTest);
-router.post('/', orderLabTest);          // ✅ Corrected
-router.put('/:id', updateLabTestStatus);  // ✅ Corrected
+// Get all lab results
+router.get("/lab-results", requireAuth, authorize('doctor', 'lab_technician', 'admin'), labController.getResults);
 
-// DELETE route for removing a lab test
-router.delete('/:id', async (req, res) => {
-    try {
-        const result = await LabTest.findByIdAndDelete(req.params.id);
-        if (!result) {
-            return res.status(404).json({ message: 'Lab test not found' });
-        }
-        res.json({ message: 'Lab test deleted successfully' });
-    } catch (error) {
-        res.status(500).json({ message: 'Error deleting lab test', error: error.message });
-    }
-});
+// Get all lab tests
+router.get("/lab-tests", requireAuth, authorize('doctor', 'lab_technician', 'admin'), labController.getAllLabTests);
 
-export default router;  // ✅ Use `export default` for ESM
+// Get a specific lab test
+router.get("/lab-tests/:id", requireAuth, authorize('doctor', 'lab_technician', 'admin', 'patient'), labController.getLabTest);
+
+// Order a new lab test
+router.post("/lab-tests", requireAuth, authorize('doctor', 'admin'), labController.orderLabTest);
+
+// Update lab test status
+router.put("/lab-tests/:id", requireAuth, authorize('lab_technician', 'admin'), labController.updateLabTestStatus);
+
+// Delete a lab test
+router.delete("/lab-tests/:id", requireAuth, authorize('doctor', 'admin'), labController.deleteLabTest);
+
+// Get lab statistics
+router.get("/lab-stats", requireAuth, authorize('admin', 'lab_technician'), labController.getLabStats);
+
+export default router;

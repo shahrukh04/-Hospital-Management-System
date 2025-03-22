@@ -13,7 +13,9 @@ import staffRoutes from "./staffRoutes.js";
 import labRoutes from "./labRoutes.js";
 import emergencyRoutes from "./emergencyRoutes.js";   // ✅ Already imported
 import bedRoutes from "./bedRoutes.js";
-
+import accessRoutes from "./accessRoutes.js";
+import patientRecordsRoute from "./patientRecordsRoute.js";  // ✅ Corrected file name
+import departmentRoute from './departmentRoute.js';
 const router = express.Router();
 
 // ✅ Use `router.use()` to mount routes
@@ -30,7 +32,9 @@ router.use("/emergency", emergencyRoutes);   // ✅ Removed "s" - corrected to m
 router.use("/beds", bedRoutes);
 router.use('/api/beds', bedRoutes);       // For bed-related endpoints
 router.use('/api/stats', statsRoutes);
-
+router.use('/access', accessRoutes);
+router.use('/patientRecords', patientRecordsRoute);
+router.use('/departments', departmentRoute);
 // ✅ Welcome Route
 router.get("/", (req, res) => res.send("Welcome to Hospital Management API"));
 

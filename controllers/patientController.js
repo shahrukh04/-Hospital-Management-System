@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import Patient from '../models/patientModel.js';  // ✅ Note the file name change here
+import Patient from '../models/patientModel.js';
 
 export const getAllPatients = async (req, res) => {
     try {
@@ -77,4 +77,13 @@ export const getCriticalPatients = async (req, res) => {
     }
 };
 
-
+// Add this default export to fix the import error
+export default {
+    getAllPatients,
+    getPatient,
+    addPatient,
+    updatePatient,
+    deletePatient,
+    getPatientCount,
+    getCriticalPatients
+};

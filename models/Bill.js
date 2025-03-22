@@ -85,7 +85,6 @@ billSchema.pre('save', function(next) {
 
 // Index for efficient queries
 billSchema.index({ patientId: 1, billDate: -1 });
-billSchema.index({ billNumber: 1 }, { unique: true });
 billSchema.index({ paymentStatus: 1 });
 
 const Bill = mongoose.model('Bill', billSchema);

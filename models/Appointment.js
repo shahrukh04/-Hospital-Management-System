@@ -23,7 +23,7 @@ const appointmentSchema = new mongoose.Schema({
 
     appointmentType: {
         type: String,
-        enum: ['initial', 'follow-up', 'emergency', 'routine', 'specialist'],
+        enum: ['new', 'follow-up', 'emergency', 'routine', 'specialist', 'Consultation', 'Diagnostic', 'Therapy', 'Surgery'],
         required: true
     },
 
@@ -93,11 +93,21 @@ const appointmentSchema = new mongoose.Schema({
         trim: true
     },
 
-    insurance: {
-        provider: { type: String },
-        policyNumber: { type: String },
-        verified: { type: Boolean, default: false }
-    },
+    // Removed insurance-related fields
+    // usePatientInsurance: {
+    //     type: Boolean,
+    //     default: true
+    // },
+
+    // insuranceVerified: {
+    //     type: Boolean,
+    //     default: false
+    // },
+
+    // insuranceNotes: {
+    //     type: String,
+    //     trim: true
+    // },
 
     payment: {
         status: {
@@ -203,8 +213,8 @@ appointmentSchema.statics.findUpcoming = function(limit = 10) {
     })
     .sort({ date: 1, startTime: 1 })
     .limit(limit)
-    .populate('patient', 'firstName lastName phone')
-    .populate('doctor', 'firstName lastName specialization');
+    .populate('patient', 'name phone insuranceDetails') // Include insuranceDetails from Patient
+    .populate('doctor', 'name specialization');
 };
 
 const Appointment = mongoose.model('Appointment', appointmentSchema);
